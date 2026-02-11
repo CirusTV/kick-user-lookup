@@ -8,7 +8,7 @@ function App() {
 
   const fetchUser = async () => {
     if (!username.trim()) {
-      setError('Enter a username first!');
+      setError('Enter a Kick username first!');
       return;
     }
 
@@ -16,56 +16,51 @@ function App() {
     setError('');
     setData(null);
 
+    console.log('🔍 Looking up:', username);
+
     try {
       const res = await fetch(`https://kick.com/api/v2/channels/${username}`);
+      console.log('API status:', res.status);
+
       if (!res.ok) {
-        throw new Error(`Kick API error - status ${res.status} (user might not exist)`);
+        throw new Error(`Kick API error - status ${res.status}. User might not exist or API is down.`);
       }
 
       const json = await res.json();
-      console.log('Full API response:', json); // ← check this in console for debugging
+      console.log('Raw API data:', json);
 
       setData(json);
     } catch (err) {
-      setError(err.message || 'Failed to load profile – try again');
+      console.error('Fetch failed:', err);
+      setError(err.message || 'Something broke – check username or try again');
     } finally {
       setLoading(false);
     }
   };
 
-  // Safe data extraction
+  // Safe data pulling
   const user = data?.user || {};
   const livestream = data?.livestream || {};
-  const followers = data?.followers_count?.toLocaleString() || data?.follower_count?.toLocaleString() || '0';
+  const followers = data?.followers_count?.toLocaleString() || '0';
   const isLive = livestream.is_live || false;
   const viewers = livestream.viewer_count?.toLocaleString() || '0';
   const bio = user.bio || 'No bio set';
+  const joinedRaw = user.created_at || data?.created_at;
+  const joined = joinedRaw 
+    ? new Date(joinedRaw).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'Unknown';
   const verified = user.verified ? '✅ Verified' : '';
-
-  // Fix join date – try multiple possible paths
-  let joined = 'Unknown';
-  if (user.created_at) {
-    joined = new Date(user.created_at).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } else if (data.created_at) { // sometimes it's at root level
-    joined = new Date(data.created_at).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
 
   return (
     <div className="min-h-screen bg-transparent p-4 md:p-6">
-      <div className="max-w-5xl mx-auto bg-black/20 backdrop-blur-xl rounded-3xl border border-cyan-500/25 shadow-2xl overflow-hidden">
+      {/* Locked core container – nothing can hide this */}
+      <div className="max-w-5xl mx-auto bg-black/25 backdrop-blur-xl rounded-3xl border border-cyan-500/30 shadow-2xl overflow-hidden">
         <div className="p-6 md:p-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center text-cyan-400 drop-shadow-lg">
             Kick Streamer Lookup
           </h1>
 
+          {/* Input + Button – always on top, never hides */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <input
               type="text"
@@ -84,9 +79,20 @@ function App() {
             </button>
           </div>
 
-          {loading && <p className="text-center text-cyan-400 animate-pulse text-lg">Pulling profile...</p>}
-          {error && <p className="text-center text-red-400 font-medium text-lg">{error}</p>}
+          {/* Feedback – always visible when needed */}
+          {loading && (
+            <p className="text-center text-cyan-400 animate-pulse text-lg mb-4">
+              Pulling profile...
+            </p>
+          )}
 
+          {error && (
+            <p className="text-center text-red-400 font-medium text-lg mb-4">
+              {error}
+            </p>
+          )}
+
+          {/* Result – only shows if data exists, doesn't hide the top */}
           {data && (
             <div className="p-6 md:p-8 bg-black/30 rounded-2xl border border-cyan-500/20">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10">
