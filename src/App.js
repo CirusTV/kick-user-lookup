@@ -8,7 +8,7 @@ function App() {
 
   const fetchUser = async () => {
     if (!username.trim()) {
-      setError('Yo, enter a username first!');
+      setError('Enter a username first!');
       return;
     }
 
@@ -16,54 +16,49 @@ function App() {
     setError('');
     setData(null);
 
-    console.log('🔍 Lookup triggered for:', username);
-
     try {
       const res = await fetch(`https://kick.com/api/v2/channels/${username}`);
-      console.log('API response status:', res.status);
-
       if (!res.ok) {
-        throw new Error(`Kick said no – status ${res.status}. User might not exist or API is cranky.`);
+        throw new Error(`Kick API error - status ${res.status} (user might not exist)`);
       }
 
       const json = await res.json();
-      console.log('Full API data:', json); // ← key log – paste this after testing
-
       setData(json);
     } catch (err) {
-      console.error('Fetch crashed:', err);
-      setError(err.message || 'Something broke – try again or check the username');
+      setError(err.message || 'Failed to load profile – try again');
     } finally {
       setLoading(false);
     }
   };
 
-  // Safe data pulling
+  // Safe data extraction
   const user = data?.user || {};
   const livestream = data?.livestream || {};
-  const followers = data?.followers_count?.toLocaleString() || data?.follower_count?.toLocaleString() || '0';
+  const followers = data?.followers_count?.toLocaleString() || '0';
   const isLive = livestream.is_live || false;
   const viewers = livestream.viewer_count?.toLocaleString() || '0';
-  const bio = user.bio || 'No bio yet';
-  const joined = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'Unknown';
+  const bio = user.bio || 'No bio set';
+  const joinedRaw = user.created_at;
+  const joined = joinedRaw 
+    ? new Date(joinedRaw).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'Unknown';
   const verified = user.verified ? '✅ Verified' : '';
 
   return (
     <div className="min-h-screen bg-transparent p-4 md:p-6">
-      <div className="max-w-4xl mx-auto bg-black/30 backdrop-blur-xl rounded-3xl border border-cyan-500/30 shadow-2xl overflow-hidden">
-        <div className="p-6 md:p-10">
+      <div className="max-w-5xl mx-auto bg-black/20 backdrop-blur-xl rounded-3xl border border-cyan-500/25 shadow-2xl overflow-hidden">
+        <div className="p-6 md:p-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center text-cyan-400 drop-shadow-lg">
             Kick Streamer Lookup
           </h1>
 
-          {/* INPUT + BUTTON – ALWAYS VISIBLE */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value.trim())}
               placeholder="cirusthavirus, xqc, loochy..."
-              className="flex-1 p-4 bg-black/60 border border-cyan-500/50 rounded-xl text-white placeholder-cyan-400 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500 transition text-lg"
+              className="flex-1 p-4 bg-black/50 border border-cyan-500/40 rounded-xl text-white placeholder-cyan-300 focus:outline-none focus:border-pink-500 transition text-lg"
             />
 
             <button
@@ -71,17 +66,15 @@ function App() {
               disabled={loading || !username.trim()}
               className="watch-btn px-8 py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed md:w-auto w-full"
             >
-              {loading ? 'Fetching...' : 'Lookup'}
+              {loading ? 'Fetching...' : 'Lookup Streamer'}
             </button>
           </div>
 
-          {/* FEEDBACK – always on screen */}
-          {loading && <p className="text-center text-cyan-400 animate-pulse text-lg mb-4">Pulling profile...</p>}
-          {error && <p className="text-center text-red-400 font-medium text-lg mb-4">{error}</p>}
+          {loading && <p className="text-center text-cyan-400 animate-pulse text-lg">Pulling profile...</p>}
+          {error && <p className="text-center text-red-400 font-medium text-lg">{error}</p>}
 
-          {/* RESULT CARD */}
           {data && (
-            <div className="p-6 md:p-8 bg-black/40 rounded-2xl border border-cyan-500/20">
+            <div className="p-6 md:p-8 bg-black/30 rounded-2xl border border-cyan-500/20">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10">
                 <img
                   src={user.profile_pic || 'https://kick.com/default-avatar.png'}
@@ -95,11 +88,11 @@ function App() {
                     {verified && <span className="text-green-400 text-2xl">✓</span>}
                   </h2>
 
-                  <p className="text-lg text-cyan-300 mb-6 max-w-prose mx-auto md:mx-0">
+                  <p className="text-lg md:text-xl text-cyan-300 mb-6 max-w-prose mx-auto md:mx-0">
                     {bio}
                   </p>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center md:text-left">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-center md:text-left">
                     <div>
                       <p className="text-sm text-gray-300">Followers</p>
                       <p className="text-2xl font-bold text-neonCyan">{followers}</p>
@@ -108,7 +101,7 @@ function App() {
                     <div>
                       <p className="text-sm text-gray-300">Status</p>
                       <p className={`text-2xl font-bold ${isLive ? 'text-green-400' : 'text-red-400'}`}>
-                        {isLive ? 'LIVE NOW' : 'Offline'}
+                        {isLive ? 'LIVE' : 'Offline'}
                       </p>
                     </div>
 
