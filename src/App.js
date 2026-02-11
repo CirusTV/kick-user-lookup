@@ -1,103 +1,131 @@
-return (
-  <div className="generator-container p-6 max-w-5xl mx-auto text-white bg-black/20 backdrop-blur-xl rounded-3xl border border-cyan-500/20 shadow-2xl">
-    <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center tracking-tight drop-shadow-md">
-      Glass & Neo Generator
-    </h1>
+import React, { useState } from 'react';
 
-    {/* Controls – always visible */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
-      {/* Glass Column */}
-      <div className="space-y-5 bg-black/15 backdrop-blur-md p-5 rounded-2xl border border-cyan-500/20">
-        <h2 className="text-xl font-semibold text-cyan-400">Glassmorphism</h2>
+function App() {
+  const [username, setUsername] = useState('');
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1">Blur: {glassBlur}px</label>
-            <input type="range" min="0" max="40" value={glassBlur} onChange={e => setGlassBlur(+e.target.value)} className="w-full h-2 accent-cyan-500 bg-cyan-900/30 rounded-lg cursor-pointer" />
+  const fetchUser = async () => {
+    if (!username.trim()) {
+      setError('Enter a username first!');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setData(null);
+
+    console.log('Lookup clicked for:', username);
+
+    try {
+      const res = await fetch(`https://kick.com/api/v2/channels/${username}`);
+      console.log('API status:', res.status);
+
+      if (!res.ok) {
+        throw new Error(`Kick API error - status ${res.status} (maybe user doesn't exist?)`);
+      }
+
+      const json = await res.json();
+      console.log('API response data:', json);
+
+      setData(json);
+    } catch (err) {
+      console.error('Fetch failed:', err);
+      setError(err.message || 'Failed to load profile – check username or try again');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-transparent p-6">
+      <div className="max-w-md mx-auto bg-black/25 backdrop-blur-xl rounded-3xl border border-cyan-500/30 shadow-2xl overflow-hidden">
+        <div className="p-6">
+          <h1 className="text-3xl font-bold mb-6 text-center text-cyan-400 drop-shadow-lg">
+            Kick Streamer Lookup
+          </h1>
+
+          {/* Input + Button – always visible */}
+          <div className="flex flex-col gap-4">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="cirusthavirus or xqc"
+              className="w-full p-3 bg-black/50 border border-cyan-500/40 rounded-lg text-white placeholder-cyan-300 focus:outline-none focus:border-pink-500 transition"
+            />
+
+            <button
+              onClick={fetchUser}
+              disabled={loading || !username.trim()}
+              className="watch-btn px-8 py-3 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Looking up...' : 'Lookup Streamer'}
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm mb-1">Opacity: {glassOpacity.toFixed(2)}</label>
-            <input type="range" min="0" max="0.5" step="0.01" value={glassOpacity} onChange={e => setGlassOpacity(+e.target.value)} className="w-full h-2 accent-cyan-500 bg-cyan-900/30 rounded-lg cursor-pointer" />
-          </div>
+          {/* Loading / Error / Result */}
+          {loading && (
+            <p className="mt-6 text-center text-cyan-400 animate-pulse">
+              Fetching profile...
+            </p>
+          )}
 
-          <div>
-            <label className="block text-sm mb-1">Border opacity: {glassBorderOpacity.toFixed(2)}</label>
-            <input type="range" min="0" max="0.5" step="0.01" value={glassBorderOpacity} onChange={e => setGlassBorderOpacity(+e.target.value)} className="w-full h-2 accent-cyan-500 bg-cyan-900/30 rounded-lg cursor-pointer" />
-          </div>
+          {error && (
+            <p className="mt-6 text-center text-red-400 font-medium">
+              {error}
+            </p>
+          )}
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm">BG Color:</label>
-            <input type="color" value={glassColor} onChange={e => setGlassColor(e.target.value)} className="w-10 h-8 rounded border border-cyan-500/40 cursor-pointer bg-transparent" />
-          </div>
-        </div>
+          {data && (
+            <div className="mt-8 p-6 bg-black/40 rounded-2xl border border-cyan-500/20">
+              <div className="flex flex-col items-center gap-4">
+                <img
+                  src={data.user?.profile_pic || 'https://kick.com/default-avatar.png'}
+                  alt={data.user?.username || 'User'}
+                  className="w-28 h-28 rounded-full border-4 border-pink-500 shadow-lg object-cover"
+                />
 
-        <div 
-          className="preview-box w-full aspect-[4/3] rounded-2xl border border-cyan-500/30 shadow-xl mx-auto"
-          style={{
-            background: `${glassColor}${Math.round(glassOpacity * 255).toString(16).padStart(2, '0')}`,
-            backdropFilter: `blur(${glassBlur}px)`,
-            WebkitBackdropFilter: `blur(${glassBlur}px)`,
-          }}
-        >
-          Glass Preview
-        </div>
-      </div>
+                <h2 className="text-2xl font-bold text-white">
+                  {data.user?.username || 'Unknown'}
+                </h2>
 
-      {/* Neo Column */}
-      <div className="space-y-5 bg-black/15 backdrop-blur-md p-5 rounded-2xl border border-pink-500/20">
-        <h2 className="text-xl font-semibold text-pink-400">Neomorphism</h2>
+                <p className="text-center text-cyan-300 text-sm max-w-xs">
+                  {data.user?.bio || 'No bio set yet'}
+                </p>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1">Shadow size: {neoShadow}px</label>
-            <input type="range" min="1" max="20" value={neoShadow} onChange={e => setNeoShadow(+e.target.value)} className="w-full h-2 accent-pink-500 bg-pink-900/30 rounded-lg cursor-pointer" />
-          </div>
+                <div className="grid grid-cols-2 gap-6 w-full text-center mt-4">
+                  <div>
+                    <p className="text-sm text-gray-300">Followers</p>
+                    <p className="text-xl font-bold text-neonCyan">
+                      {data.followersCount?.toLocaleString() || '0'}
+                    </p>
+                  </div>
 
-          <div className="flex items-center gap-3">
-            <input type="checkbox" checked={neoInset} onChange={e => setNeoInset(e.target.checked)} className="accent-pink-500 w-5 h-5 cursor-pointer" />
-            <label className="text-sm">Inset / embossed</label>
-          </div>
+                  <div>
+                    <p className="text-sm text-gray-300">Status</p>
+                    <p className={`text-xl font-bold ${data.livestream?.is_live ? 'text-green-400' : 'text-red-400'}`}>
+                      {data.livestream?.is_live ? 'LIVE' : 'Offline'}
+                    </p>
+                  </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm">Base color:</label>
-            <input type="color" value={neoColor} onChange={e => setNeoColor(e.target.value)} className="w-10 h-8 rounded border border-pink-500/40 cursor-pointer bg-transparent" />
-          </div>
-        </div>
-
-        <div 
-          className="preview-box w-full aspect-[4/3] rounded-2xl shadow-2xl mx-auto"
-          style={{ background: neoColor, boxShadow: `${neoInset ? 'inset ' : ''}${neoShadow}px ${neoShadow}px ${neoShadow*2}px #bebebe, ${neoInset ? 'inset ' : ''}-${neoShadow}px -${neoShadow}px ${neoShadow*2}px #ffffff` }}
-        >
-          Neo Preview
+                  {data.livestream?.is_live && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-gray-300">Current Viewers</p>
+                      <p className="text-xl font-bold text-pink-400">
+                        {data.livestream.viewer_count?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
+  );
+}
 
-    {/* Button + copy feedback – always visible */}
-    <div className="mt-8 flex flex-col items-center gap-4">
-      <button 
-        onClick={generateCss}
-        className="watch-btn px-10 py-3 text-lg font-bold shadow-lg hover:shadow-2xl transition-all"
-      >
-        Generate & Copy CSS
-      </button>
-
-      {copied && (
-        <div className="text-green-400 font-medium animate-pulse">
-          Copied to clipboard! ✓
-        </div>
-      )}
-    </div>
-
-    {/* Generated CSS – shows below when ready */}
-    {generatedCss && (
-      <div className="mt-6">
-        <h3 className="text-lg mb-2 text-cyan-300 text-center">Generated CSS – ready to use</h3>
-        <pre className="p-4 bg-black/30 rounded-xl overflow-x-auto text-sm font-mono border border-cyan-500/20 whitespace-pre-wrap">
-          {generatedCss}
-        </pre>
-      </div>
-    )}
-  </div>
-);
+export default App;
