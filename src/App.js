@@ -23,6 +23,8 @@ function App() {
       }
 
       const json = await res.json();
+      console.log('Full API response:', json); // ← check this in console for debugging
+
       setData(json);
     } catch (err) {
       setError(err.message || 'Failed to load profile – try again');
@@ -34,15 +36,27 @@ function App() {
   // Safe data extraction
   const user = data?.user || {};
   const livestream = data?.livestream || {};
-  const followers = data?.followers_count?.toLocaleString() || '0';
+  const followers = data?.followers_count?.toLocaleString() || data?.follower_count?.toLocaleString() || '0';
   const isLive = livestream.is_live || false;
   const viewers = livestream.viewer_count?.toLocaleString() || '0';
   const bio = user.bio || 'No bio set';
-  const joinedRaw = user.created_at;
-  const joined = joinedRaw 
-    ? new Date(joinedRaw).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    : 'Unknown';
   const verified = user.verified ? '✅ Verified' : '';
+
+  // Fix join date – try multiple possible paths
+  let joined = 'Unknown';
+  if (user.created_at) {
+    joined = new Date(user.created_at).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } else if (data.created_at) { // sometimes it's at root level
+    joined = new Date(data.created_at).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
 
   return (
     <div className="min-h-screen bg-transparent p-4 md:p-6">
