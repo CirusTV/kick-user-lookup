@@ -16,38 +16,34 @@ function App() {
     setError('');
     setData(null);
 
-    console.log('Looking up:', username);
-
     try {
       const res = await fetch(`https://kick.com/api/v2/channels/${username}`);
-      console.log('Status:', res.status);
-
       if (!res.ok) {
-        throw new Error(`Kick API error - status ${res.status} (user might not exist)`);
+        throw new Error(`User not found or API error (status ${res.status})`);
       }
 
       const json = await res.json();
-      console.log('Raw API data:', json); // ← this will show in console what we're getting
-
       setData(json);
     } catch (err) {
-      console.error('Fetch error:', err);
-      setError(err.message || 'Failed to load – try again or check username');
+      setError(err.message || 'Failed to load profile – check username');
     } finally {
       setLoading(false);
     }
   };
 
-  const followers = data?.followersCount || data?.follower_count || 0;
-  const isLive = data?.livestream?.is_live || false;
-  const viewers = data?.livestream?.viewer_count || 0;
-  const bio = data?.user?.bio || 'No bio set';
-  const createdAt = data?.user?.created_at ? new Date(data.user.created_at).toLocaleDateString() : 'Unknown';
-  const verified = data?.user?.verified ? '✅ Verified' : '';
+  // Pull data safely with fallbacks
+  const user = data?.user || {};
+  const livestream = data?.livestream || {};
+  const followers = data?.followers_count?.toLocaleString() || '0';
+  const isLive = livestream.is_live || false;
+  const viewers = livestream.viewer_count?.toLocaleString() || '0';
+  const category = livestream.categories?.[0]?.name || '';
+  const joined = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown';
+  const verified = user.verified ? '✅ Verified' : '';
 
   return (
     <div className="min-h-screen bg-transparent p-4 md:p-6">
-      <div className="max-w-4xl mx-auto bg-black/20 backdrop-blur-xl rounded-3xl border border-cyan-500/25 shadow-2xl overflow-hidden">
+      <div className="max-w-5xl mx-auto bg-black/20 backdrop-blur-xl rounded-3xl border border-cyan-500/25 shadow-2xl overflow-hidden">
         <div className="p-6 md:p-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-6 text-center text-cyan-400 drop-shadow-lg">
             Kick Streamer Lookup
@@ -65,10 +61,10 @@ function App() {
 
             <button
               onClick={fetchUser}
-              disabled={loading || !username}
+              disabled={loading || !username.trim()}
               className="watch-btn px-8 py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed md:w-auto w-full"
             >
-              {loading ? 'Fetching...' : 'Lookup'}
+              {loading ? 'Fetching...' : 'Lookup Streamer'}
             </button>
           </div>
 
@@ -81,22 +77,24 @@ function App() {
             <div className="p-6 md:p-8 bg-black/30 rounded-2xl border border-cyan-500/20">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10">
                 <img
-                  src={data.user?.profile_pic || 'https://kick.com/default-avatar.png'}
-                  alt={data.user?.username || 'User'}
+                  src={user.profile_pic || 'https://kick.com/default-avatar.png'}
+                  alt={user.username || 'User'}
                   className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-pink-500 shadow-2xl object-cover flex-shrink-0"
                 />
 
                 <div className="flex-1 text-center md:text-left">
-                  <h2 className="text-3xl font-bold text-white mb-2">
-                    {data.user?.username || 'User'} {verified && <span className="text-green-400 text-xl">✓</span>}
+                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                    {user.username || 'User'} {verified && <span className="text-green-400 text-2xl ml-2">✓</span>}
                   </h2>
 
-                  <p className="text-cyan-300 mb-4 text-lg">{bio}</p>
+                  <p className="text-lg md:text-xl text-cyan-300 mb-6">
+                    {bio}
+                  </p>
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-center md:text-left">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center md:text-left">
                     <div>
                       <p className="text-sm text-gray-300">Followers</p>
-                      <p className="text-2xl font-bold text-neonCyan">{followers.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-neonCyan">{followers}</p>
                     </div>
 
                     <div>
@@ -109,13 +107,20 @@ function App() {
                     {isLive && (
                       <div>
                         <p className="text-sm text-gray-300">Viewers</p>
-                        <p className="text-2xl font-bold text-pink-400">{viewers.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-pink-400">{viewers}</p>
                       </div>
                     )}
 
-                    <div>
+                    {isLive && category && (
+                      <div>
+                        <p className="text-sm text-gray-300">Category</p>
+                        <p className="text-xl font-bold text-cyan-300">{category}</p>
+                      </div>
+                    )}
+
+                    <div className="col-span-2 md:col-span-1">
                       <p className="text-sm text-gray-300">Joined</p>
-                      <p className="text-lg text-cyan-300">{createdAt}</p>
+                      <p className="text-lg text-cyan-300">{joined}</p>
                     </div>
                   </div>
                 </div>
